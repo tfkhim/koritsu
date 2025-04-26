@@ -1,0 +1,9 @@
+/*
+!.gitignore
+!LICENSE
+!README.md
+!docs
+!.envrc
+!flake.nix
+!flake.lock
+!.dprint.jsonc
