@@ -8,7 +8,17 @@ The project documentation can be found in the `docs` folder.
 
 ## Development
 
-### Formatting
+### Tests
+
+To run the unit and integration tests execute the following command
+
+    cargo test
+
+### Linting and formatting
+
+To run the linting rules use the command
+
+    lint
 
 Check correct code formatting with
 
