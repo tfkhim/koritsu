@@ -7,3 +7,7 @@
 !flake.nix
 !flake.lock
 !.dprint.jsonc
+!Cargo.toml
+!Cargo.lock
+!/src
+!/tests

@@ -11,7 +11,27 @@ The project documentation can be found in the `docs` folder.
 Please read the `docs/development_guidelines.md` file. It describes conventions
 and best practices of this project.
 
-### Formatting
+### Building the project
+
+To build the project you can run
+
+    cargo build
+
+If you want to build the Nix package you can run
+
+    nix build .#github-app
+
+### Tests
+
+To run the test suite execute the following command
+
+    cargo test
+
+### Linting and formatting
+
+To run the linting rules use the command
+
+    lint
 
 Check correct code formatting with
 

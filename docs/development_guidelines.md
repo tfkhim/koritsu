@@ -6,7 +6,7 @@ should follow them as close as possible.
 ## Quality
 
 - Write tests for new code
-  - Prefer integration style test
+  - Prefer integration style test in `tests`
   - For code that can not be tested with an integration test you should write a
     unit test in the module instead
 - After changing the codebase always execute the following quality assurance
