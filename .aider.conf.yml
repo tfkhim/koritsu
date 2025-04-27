@@ -1,0 +1,14 @@
+read:
+  - docs/development_guidelines.md
+  - README.md
+
+auto-test: true
+test-cmd: cargo test
+
+auto-lint: true
+lint-cmd:
+  - "cargo fmt --"
+  - dprint fmt
+  # The bash -c part is a bit of a hack to avoid errors due to passed input files
+  - "bash -c 'cargo clippy --all-targets -- --deny warnings'"
+
