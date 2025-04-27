@@ -10,6 +10,7 @@ description = "A GitHub application to automate parts of the Koritsu workflow"
 [dependencies]
 axum = "0.8.3"
 hyper = { version = "1.6.0", features = ["full"] }
+serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.44.2", features = ["full"] }
 tower = "0.5.2"
 tower-http = "0.6.2"
