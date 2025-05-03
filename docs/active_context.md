@@ -2,20 +2,26 @@
 
 ## Current Focus
 
-Project initialization and setup of the Memory Bank.
+Implementing the GitHub application to receive and process `workflow_run` events.
 
 ## Recent Changes
 
-- Initialized the core Memory Bank files based on `.clinerules`.
+- Replaced the `/hello` endpoint with `/github/events`.
+- Implemented deserialization for `workflow_run` event payloads.
+- Added basic logging of workflow name and status.
+- Added integration tests for the new endpoint.
+- Added `serde` and `serde_json` dependencies.
 
 ## Next Steps
 
-- Begin development of the core GitHub application functionality based on the project brief and product context.
-- Define the initial structure for the Rust project.
+- Continue implementing the core GitHub application logic, including checking CI status and merging branches based on the Koritsu workflow.
+- Implement the GitHub API integration facade.
+- Develop the Command Line Interface (CLI) tool.
 
 ## Active Decisions & Considerations
 
-- Confirming the initial Memory Bank structure aligns with project needs.
+- Ensuring accurate deserialization of GitHub `workflow_run` payloads.
+- Designing the logic for checking CI status and performing merges.
 
 ## Important Patterns & Preferences
 
@@ -25,4 +31,5 @@ Project initialization and setup of the Memory Bank.
 
 ## Learnings & Insights
 
-- Project is in the very early stages. Core documentation is being established.
+- The project is progressing with the implementation of core event handling.
+- Need to carefully consider the structure of GitHub API interactions and the merging logic.
