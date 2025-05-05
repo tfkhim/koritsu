@@ -11,25 +11,31 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
-use http_body_util::BodyExt;
+use serde_json::json;
 use tower::ServiceExt;
 
 #[tokio::test]
-async fn hello_test() {
+async fn receive_workflow_run() {
     let app = koritsu_app::build_app();
+    let payload = json!({
+        "action": "completed",
+        "workflow_run": {
+            "conclusion": "success",
+            "head_branch": "ready/new-feature",
+        },
+    });
 
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/hello")
-                .body(Body::empty())
+                .method("POST")
+                .uri("/github/events")
+                .header("X-GitHub-Event", "workflow_run")
+                .body(Body::from(serde_json::to_vec(&payload).unwrap()))
                 .unwrap(),
         )
         .await
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
-
-    let body = response.into_body().collect().await.unwrap().to_bytes();
-    assert_eq!(&body[..], b"Hello, World!");
 }

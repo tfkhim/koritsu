@@ -7,8 +7,11 @@
  * received a copy of the license along with this program.
  */
 
-use axum::{Router, routing::get};
+use axum::{Router, routing::post};
+use github_event_handler::github_event_handler;
+
+mod github_event_handler;
 
 pub fn build_app() -> Router {
-    Router::new().route("/hello", get(async || "Hello, World!"))
+    Router::new().route("/github/events", post(github_event_handler))
 }
