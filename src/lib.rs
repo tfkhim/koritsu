@@ -8,10 +8,10 @@
  */
 
 use axum::{Router, routing::post};
-use github_event_handler::github_event_handler;
+use github_events::event_handler;
 
-mod github_event_handler;
+mod github_events;
 
 pub fn build_app() -> Router {
-    Router::new().route("/github/events", post(github_event_handler))
+    Router::new().route("/github/events", post(event_handler))
 }
