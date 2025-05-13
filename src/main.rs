@@ -7,12 +7,15 @@
  * received a copy of the license along with this program.
  */
 
-use std::io::Error;
+use std::error::Error;
+
+use koritsu_app::{ApplicationConfig, build_app};
 use tokio::net::TcpListener;
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
-    let app = koritsu_app::build_app();
+async fn main() -> Result<(), Box<dyn Error>> {
+    let config = ApplicationConfig::from_env()?;
+    let app = build_app(config);
 
     let listener = TcpListener::bind("127.0.0.1:8080").await?;
     axum::serve(listener, app).await?;

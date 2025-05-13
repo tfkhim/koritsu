@@ -7,11 +7,19 @@
  * received a copy of the license along with this program.
  */
 
+use std::sync::Arc;
+
+pub use application_config::ApplicationConfig;
 use axum::{Router, routing::post};
 use github_events::event_handler;
 
+mod application_config;
 mod github_events;
 
-pub fn build_app() -> Router {
-    Router::new().route("/github/events", post(event_handler))
+pub fn build_app(config: ApplicationConfig) -> Router {
+    let config = Arc::new(config);
+
+    Router::new()
+        .route("/github/events", post(event_handler))
+        .with_state(config)
 }
