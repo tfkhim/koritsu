@@ -15,6 +15,8 @@ use github_events::event_handler;
 
 mod application_config;
 mod github_events;
+mod header_map_ext;
+mod problem;
 
 pub fn build_app(config: ApplicationConfig) -> Router {
     let config = Arc::new(config);
