@@ -44,7 +44,7 @@ async fn requires_the_signature_header() {
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     assert_eq!(
         response.body_as_json(),
-        json!({"title": "Missing header X-Hub-Signature-256"})
+        json!({"status": 400, "title": "Missing header X-Hub-Signature-256"})
     );
 }
 
@@ -60,7 +60,7 @@ async fn requires_the_event_type_header() {
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     assert_eq!(
         response.body_as_json(),
-        json!({"title": "Missing header X-Github-Event"})
+        json!({"status": 400, "title": "Missing header X-Github-Event"})
     );
 }
 
@@ -79,7 +79,7 @@ async fn returns_an_error_if_the_signature_is_invalid() {
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     assert_eq!(
         response.body_as_json(),
-        json!({"title": "Event signature validation failed"})
+        json!({"status": 401, "title": "Event signature validation failed"})
     );
 }
 
@@ -94,7 +94,11 @@ async fn returns_an_error_if_the_event_payload_is_invalid() {
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     assert_eq!(
         response.body_as_json(),
-        json!({"title": "Event payload is invalid"})
+        json!({
+            "status": 400,
+            "title": "Event payload is invalid",
+            "detail": "missing field `action` at line 1 column 20"
+        })
     );
 }
 

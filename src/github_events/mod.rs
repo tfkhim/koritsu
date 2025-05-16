@@ -10,7 +10,11 @@
 use std::sync::Arc;
 use thiserror::Error;
 
-use axum::{Json, body::Bytes, extract::State, response::IntoResponse};
+use axum::{
+    body::Bytes,
+    extract::State,
+    response::{IntoResponse, Response},
+};
 use hyper::{HeaderMap, StatusCode};
 use serde_json::{Error as SerdeError, from_slice};
 use verifier::{EventSignature, EventVerifier, SignatureConversionError};
@@ -62,15 +66,17 @@ pub enum GithubEventError {
 }
 
 impl IntoResponse for GithubEventError {
-    fn into_response(self) -> axum::response::Response {
+    fn into_response(self) -> Response {
         let status = match self {
-            GithubEventError::InvalidHeader(..) => StatusCode::BAD_REQUEST,
-            GithubEventError::InvalidSignatureHeader(..) => StatusCode::BAD_REQUEST,
             GithubEventError::SignatureInvalid() => StatusCode::UNAUTHORIZED,
-            GithubEventError::InvalidEventPayload(..) => StatusCode::BAD_REQUEST,
+            _ => StatusCode::BAD_REQUEST,
         };
 
-        let problem = Json::<Problem>(self.into());
-        (status, problem).into_response()
+        let detail = match self {
+            GithubEventError::InvalidEventPayload(ref serde_error) => Some(serde_error),
+            _ => None,
+        };
+
+        Problem::new(status, &self, detail).into_response()
     }
 }
