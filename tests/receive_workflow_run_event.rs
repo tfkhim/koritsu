@@ -109,6 +109,13 @@ fn given_workflow_run_event_payload() -> Value {
             "conclusion": "success",
             "head_branch": "ready/new-feature",
         },
+        "repository": {
+          "full_name": "test-owner/test-repo",
+          "default_branch": "main",
+        },
+        "installation": {
+          "id": 1337,
+        },
     })
 }
 
