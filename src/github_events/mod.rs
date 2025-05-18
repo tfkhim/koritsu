@@ -18,10 +18,11 @@ use axum::{
 use hyper::{HeaderMap, StatusCode};
 use serde_json::{Error as SerdeError, from_slice};
 use verifier::{EventSignature, EventVerifier, SignatureConversionError};
-use workflow_run::handle_workflow_run_event;
+use workflow_run::WorkflowRunHandler;
 
 use crate::{
-    application_config::ApplicationConfig,
+    application_context::ApplicationContext,
+    github_api::{ApiError, GitHubApi},
     header_map_ext::{GetStrHeaderError, HeaderMapExt},
     problem::Problem,
 };
@@ -29,22 +30,23 @@ use crate::{
 mod verifier;
 mod workflow_run;
 
-pub async fn event_handler(
-    State(config): State<Arc<ApplicationConfig>>,
+pub async fn event_handler<API: GitHubApi>(
+    State(app_context): State<Arc<ApplicationContext<API>>>,
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<(), GithubEventError> {
     let signature_header = headers.get_str("X-Hub-Signature-256")?;
     let signature = EventSignature::from_signature_header(signature_header)?;
 
-    let verifier = EventVerifier::new(&config.github_webhook_secret);
+    let verifier = EventVerifier::new(&app_context.config().github_webhook_secret);
 
     if !verifier.payload_is_valid(&body, &signature) {
         return Err(GithubEventError::SignatureInvalid());
     }
 
     if headers.get_str("X-Github-Event")? == "workflow_run" {
-        handle_workflow_run_event(from_slice(&body)?).await;
+        let handler = WorkflowRunHandler::new(app_context.github_api());
+        handler.handle_event(from_slice(&body)?).await?;
     }
 
     Ok(())
@@ -63,6 +65,9 @@ pub enum GithubEventError {
 
     #[error("Event payload is invalid")]
     InvalidEventPayload(#[from] SerdeError),
+
+    #[error(transparent)]
+    ApiRequestFailed(#[from] ApiError),
 }
 
 impl IntoResponse for GithubEventError {
