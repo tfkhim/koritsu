@@ -7,6 +7,8 @@
  * received a copy of the license along with this program.
  */
 
+use std::ops::Deref;
+
 use axum::{
     body::{Body, Bytes},
     extract::Request,
@@ -16,7 +18,10 @@ use axum::{
 };
 use hmac::{Hmac, Mac};
 use http_body_util::BodyExt;
-use koritsu_app::{ApplicationConfig, build_app};
+use koritsu_app::{
+    ApplicationConfig, build_app_with_api,
+    github_api::{ApiError, BranchComparison, BranchComparisonRequest, GitHubApi},
+};
 use serde_json::{Value, json};
 use sha2::Sha256;
 use tower::{Service, ServiceExt};
@@ -24,7 +29,7 @@ use tower::{Service, ServiceExt};
 #[tokio::test]
 async fn returns_ok_for_a_valid_workflow_run() {
     let mut client = TestClient::new();
-    let payload = given_workflow_run_event_payload();
+    let payload = given_successful_workflow_run_event_payload();
 
     let response = client.send_workflow_run_event(&payload).await;
 
@@ -35,7 +40,7 @@ async fn returns_ok_for_a_valid_workflow_run() {
 #[tokio::test]
 async fn requires_the_signature_header() {
     let mut client = TestClient::new();
-    let payload = given_workflow_run_event_payload();
+    let payload = given_successful_workflow_run_event_payload();
     let mut request = client.build_event_request("workflow_run", &payload);
     request.headers_mut().remove("X-Hub-Signature-256");
 
@@ -51,7 +56,7 @@ async fn requires_the_signature_header() {
 #[tokio::test]
 async fn requires_the_event_type_header() {
     let mut client = TestClient::new();
-    let payload = given_workflow_run_event_payload();
+    let payload = given_successful_workflow_run_event_payload();
     let mut request = client.build_event_request("workflow_run", &payload);
     request.headers_mut().remove("X-GitHub-Event");
 
@@ -67,7 +72,7 @@ async fn requires_the_event_type_header() {
 #[tokio::test]
 async fn returns_an_error_if_the_signature_is_invalid() {
     let mut client = TestClient::new();
-    let payload = given_workflow_run_event_payload();
+    let payload = given_successful_workflow_run_event_payload();
     let mut request = client.build_event_request("workflow_run", &payload);
     request.headers_mut().insert(
         "X-Hub-Signature-256",
@@ -102,12 +107,34 @@ async fn returns_an_error_if_the_event_payload_is_invalid() {
     );
 }
 
-fn given_workflow_run_event_payload() -> Value {
+#[tokio::test]
+async fn returns_an_error_if_the_api_request_fails() {
+    let mut client = TestClient::new();
+    let payload = given_workflow_run_event_payload("ready/error");
+    let request = client.build_event_request("workflow_run", &payload);
+
+    let response = client.send_request(request).await;
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(
+        response.body_as_json(),
+        json!({
+            "status": 400,
+            "title": "Repository not found",
+        })
+    );
+}
+
+fn given_successful_workflow_run_event_payload() -> Value {
+    given_workflow_run_event_payload("read/new-feature")
+}
+
+fn given_workflow_run_event_payload(head_branch: &str) -> Value {
     json!({
         "action": "completed",
         "workflow_run": {
             "conclusion": "success",
-            "head_branch": "ready/new-feature",
+            "head_branch": head_branch,
         },
         "repository": {
           "full_name": "test-owner/test-repo",
@@ -130,7 +157,8 @@ impl TestClient {
             github_webhook_secret: "secret".to_string(),
         };
 
-        let service = build_app(config.clone()).into_service();
+        let api = TestGitHubApi {};
+        let service = build_app_with_api(config.clone(), api).into_service();
 
         TestClient { config, service }
     }
@@ -198,5 +226,36 @@ trait ResponseExt {
 impl ResponseExt for Response<Bytes> {
     fn body_as_json(&self) -> Value {
         serde_json::from_slice(self.body()).unwrap()
+    }
+}
+
+struct TestGitHubApi;
+
+impl GitHubApi for TestGitHubApi {
+    async fn compare_commits(
+        &self,
+        request: BranchComparisonRequest,
+    ) -> Result<BranchComparison, ApiError> {
+        if request.head_branch.contains("error") {
+            return Err(ApiError::RepositoryNotFound());
+        }
+
+        let (ahead_by, behind_by) = match request.head_branch.deref() {
+            "ready/two_ahead" => (2, 0),
+            "ready/one_ahead" => (1, 0),
+            "ready/behind" => (1, 1),
+            _ => (0, 0),
+        };
+
+        Ok(BranchComparison {
+            ahead_by,
+            behind_by,
+        })
+    }
+}
+
+impl From<&ApplicationConfig> for TestGitHubApi {
+    fn from(_: &ApplicationConfig) -> Self {
+        Self {}
     }
 }
