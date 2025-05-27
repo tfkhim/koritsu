@@ -13,30 +13,39 @@
     crane.url = "github:ipetkov/crane";
   };
 
-  outputs = { self, nixpkgs, crane, ... }:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      crane,
+      ...
+    }:
     let
       supportedSystems = [ "x86_64-linux" ];
 
-      forSupportedSystems = generator:
+      forSupportedSystems =
+        generator:
         let
-          generateForSystem = system: generator rec {
-            inherit system;
-            pkgs = nixpkgs.legacyPackages.${system};
-            craneLib = crane.mkLib pkgs;
-          };
+          generateForSystem =
+            system:
+            generator rec {
+              inherit system;
+              pkgs = nixpkgs.legacyPackages.${system};
+              craneLib = crane.mkLib pkgs;
+            };
         in
         nixpkgs.lib.genAttrs supportedSystems generateForSystem;
     in
     {
-      packages = forSupportedSystems ({ pkgs, craneLib, ... }:
+      packages = forSupportedSystems (
+        { pkgs, craneLib, ... }:
         {
           github-app = craneLib.buildPackage {
             src = craneLib.cleanCargoSource (craneLib.path ./.);
 
             strictDeps = true;
 
-            buildInputs = with pkgs.lib; [ ]
-              ++ optional pkgs.stdenv.isDarwin pkgs.libiconv;
+            buildInputs = with pkgs.lib; [ ] ++ optional pkgs.stdenv.isDarwin pkgs.libiconv;
 
             meta = with pkgs.lib; {
               description = "GitHub Koritsu application";
@@ -45,9 +54,16 @@
               mainProgram = "koritsu-app";
             };
           };
-        });
+        }
+      );
 
-      devShells = forSupportedSystems ({ system, pkgs, craneLib, ... }:
+      devShells = forSupportedSystems (
+        {
+          system,
+          pkgs,
+          craneLib,
+          ...
+        }:
         let
           fix = pkgs.writeShellScriptBin "fix" ''
             set -e
@@ -87,8 +103,9 @@
               cocogitto
             ];
           };
-        });
+        }
+      );
 
-      formatter = forSupportedSystems ({ pkgs, ... }: pkgs.nixpkgs-fmt);
+      formatter = forSupportedSystems ({ pkgs, ... }: pkgs.nixfmt-tree);
     };
 }
