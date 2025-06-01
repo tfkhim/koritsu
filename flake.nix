@@ -45,7 +45,10 @@
 
             strictDeps = true;
 
-            buildInputs = with pkgs.lib; [ ] ++ optional pkgs.stdenv.isDarwin pkgs.libiconv;
+            buildInputs = [
+              pkgs.openssl
+              pkgs.pkg-config
+            ] ++ pkgs.lib.optional pkgs.stdenv.isDarwin pkgs.libiconv;
 
             meta = with pkgs.lib; {
               description = "GitHub Koritsu application";

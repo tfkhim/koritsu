@@ -7,8 +7,10 @@
  * received a copy of the license along with this program.
  */
 
-use serde::Deserialize;
+pub use rest_impl::GitHubRestApi;
 use thiserror::Error;
+
+mod rest_impl;
 
 pub trait GitHubApi: Send + Sync {
     fn compare_commits(
@@ -23,7 +25,6 @@ pub struct BranchComparisonRequest {
     pub head_branch: String,
 }
 
-#[derive(Debug, Deserialize)]
 pub struct BranchComparison {
     pub ahead_by: usize,
     pub behind_by: usize,
@@ -31,26 +32,9 @@ pub struct BranchComparison {
 
 #[derive(Error, Debug)]
 pub enum ApiError {
-    #[error("Repository not found")]
-    RepositoryNotFound(),
-}
+    #[error("{0}")]
+    RepositoryNotFound(String),
 
-pub struct DummyApi;
-
-impl Default for DummyApi {
-    fn default() -> Self {
-        Self
-    }
-}
-
-impl GitHubApi for DummyApi {
-    async fn compare_commits(
-        &self,
-        _: BranchComparisonRequest,
-    ) -> Result<BranchComparison, ApiError> {
-        Ok(BranchComparison {
-            ahead_by: 1,
-            behind_by: 0,
-        })
-    }
+    #[error("Unspecific error")]
+    Unspecific,
 }

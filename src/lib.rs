@@ -12,7 +12,7 @@ use std::sync::Arc;
 pub use application_config::ApplicationConfig;
 use application_context::ApplicationContext;
 use axum::{Router, routing::post};
-use github_api::{DummyApi, GitHubApi};
+use github_api::{GitHubApi, GitHubRestApi};
 use github_events::event_handler;
 
 pub mod github_api;
@@ -24,7 +24,7 @@ mod header_map_ext;
 mod problem;
 
 pub fn build_app(config: ApplicationConfig) -> Router {
-    let github_api = DummyApi;
+    let github_api = GitHubRestApi::new(&config);
     build_app_with_api(config, github_api)
 }
 

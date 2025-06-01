@@ -108,9 +108,9 @@ async fn returns_an_error_if_the_event_payload_is_invalid() {
 }
 
 #[tokio::test]
-async fn returns_an_error_if_the_api_request_fails() {
+async fn returns_an_error_if_the_repository_is_not_known() {
     let mut client = TestClient::new();
-    let payload = given_workflow_run_event_payload("ready/error");
+    let payload = given_workflow_run_event_payload("ready/unknown");
     let request = client.build_event_request("workflow_run", &payload);
 
     let response = client.send_request(request).await;
@@ -120,7 +120,27 @@ async fn returns_an_error_if_the_api_request_fails() {
         response.body_as_json(),
         json!({
             "status": 400,
-            "title": "Repository not found",
+            "title": "GitHub API request failed",
+            "detail": "Repository not found",
+        })
+    );
+}
+
+#[tokio::test]
+async fn returns_an_error_if_the_api_request_fails() {
+    let mut client = TestClient::new();
+    let payload = given_workflow_run_event_payload("ready/error");
+    let request = client.build_event_request("workflow_run", &payload);
+
+    let response = client.send_request(request).await;
+
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(
+        response.body_as_json(),
+        json!({
+            "status": 500,
+            "title": "GitHub API request failed",
+            "detail": "Unspecific error",
         })
     );
 }
@@ -153,9 +173,7 @@ struct TestClient {
 
 impl TestClient {
     fn new() -> Self {
-        let config = ApplicationConfig {
-            github_webhook_secret: "secret".to_string(),
-        };
+        let config = ApplicationConfig::with_secret("secret".to_string());
 
         let api = TestGitHubApi {};
         let service = build_app_with_api(config.clone(), api).into_service();
@@ -236,8 +254,14 @@ impl GitHubApi for TestGitHubApi {
         &self,
         request: BranchComparisonRequest,
     ) -> Result<BranchComparison, ApiError> {
+        if request.head_branch.contains("unknown") {
+            return Err(ApiError::RepositoryNotFound(
+                "Repository not found".to_string(),
+            ));
+        }
+
         if request.head_branch.contains("error") {
-            return Err(ApiError::RepositoryNotFound());
+            return Err(ApiError::Unspecific);
         }
 
         let (ahead_by, behind_by) = match request.head_branch.deref() {

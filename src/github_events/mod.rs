@@ -7,7 +7,7 @@
  * received a copy of the license along with this program.
  */
 
-use std::sync::Arc;
+use std::{fmt::Display, sync::Arc};
 use thiserror::Error;
 
 use axum::{
@@ -66,7 +66,7 @@ pub enum GithubEventError {
     #[error("Event payload is invalid")]
     InvalidEventPayload(#[from] SerdeError),
 
-    #[error(transparent)]
+    #[error("GitHub API request failed")]
     ApiRequestFailed(#[from] ApiError),
 }
 
@@ -74,11 +74,15 @@ impl IntoResponse for GithubEventError {
     fn into_response(self) -> Response {
         let status = match self {
             GithubEventError::SignatureInvalid() => StatusCode::UNAUTHORIZED,
+            GithubEventError::ApiRequestFailed(ApiError::Unspecific) => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
             _ => StatusCode::BAD_REQUEST,
         };
 
-        let detail = match self {
+        let detail: Option<&dyn Display> = match self {
             GithubEventError::InvalidEventPayload(ref serde_error) => Some(serde_error),
+            GithubEventError::ApiRequestFailed(ref api_error) => Some(api_error),
             _ => None,
         };
 
