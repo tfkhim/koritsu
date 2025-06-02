@@ -47,22 +47,23 @@ impl<API: Deref<Target = T>, T: GitHubApi> WorkflowRunHandler<API> {
 
     pub async fn handle_event(&self, event: WorkflowRunEvent) -> Result<(), ApiError> {
         if self.is_successful(&event) {
-            let repository_name = &event.repository.full_name;
-            println!("Repository name is {repository_name}");
+            let repository_name = event.repository.full_name;
+            let installation_id = event.installation.id;
+            let default_branch = event.repository.default_branch;
 
-            let installation_id = &event.installation.id;
-            println!("Installation id is {installation_id}");
-
-            let default_branch = &event.repository.default_branch;
-            println!("Respository default branch is {default_branch}");
-
-            if let Some(branch) = event.workflow_run.head_branch {
-                println!("Workflow run for branch {branch} successful");
+            if let Some(head_branch) = event.workflow_run.head_branch {
+                tracing::info!(
+                    repository_name,
+                    installation_id,
+                    default_branch,
+                    head_branch,
+                    "Processing successful workflow run event",
+                );
 
                 let branch_comparison_request = BranchComparisonRequest {
-                    repository_name: repository_name.to_string(),
-                    base_branch: default_branch.to_string(),
-                    head_branch: branch.to_string(),
+                    repository_name,
+                    base_branch: default_branch,
+                    head_branch,
                 };
 
                 let BranchComparison {
@@ -73,8 +74,7 @@ impl<API: Deref<Target = T>, T: GitHubApi> WorkflowRunHandler<API> {
                     .compare_commits(branch_comparison_request)
                     .await?;
 
-                println!("Ahead by: {ahead_by}");
-                println!("Behind by: {behind_by}");
+                tracing::info!(ahead_by, behind_by, "Branch comparison was successful");
             }
         }
 

@@ -14,6 +14,7 @@ use application_context::ApplicationContext;
 use axum::{Router, routing::post};
 use github_api::{GitHubApi, GitHubRestApi};
 use github_events::event_handler;
+use tower_http::trace::TraceLayer;
 
 pub mod github_api;
 
@@ -37,4 +38,5 @@ pub fn build_app_with_api<API: GitHubApi + 'static>(
     Router::new()
         .route("/github/events", post(event_handler))
         .with_state(app_context)
+        .layer(TraceLayer::new_for_http())
 }

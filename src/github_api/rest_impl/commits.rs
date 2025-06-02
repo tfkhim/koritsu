@@ -14,6 +14,7 @@ use reqwest::Client;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use std::ops::Deref;
+use tracing::instrument;
 
 use super::BasicError;
 
@@ -29,6 +30,7 @@ impl<'a, C: Deref<Target = Client>> GithubCommitsRestApi<'a, C> {
 }
 
 impl<C: Deref<Target = Client>> GithubCommitsRestApi<'_, C> {
+    #[instrument(skip_all, fields(request))]
     pub async fn compare_commits(
         &self,
         request: BranchComparisonRequest,
@@ -46,18 +48,21 @@ impl<C: Deref<Target = Client>> GithubCommitsRestApi<'_, C> {
             .header("X-GitHub-Api-Version", "2022-11-28")
             .send()
             .await
+            .inspect_err(|error| tracing::error!(message = %error))
             .map_err(|_| ApiError::Unspecific)?;
 
         match response.status() {
             StatusCode::OK => response
                 .json::<BranchComparisonRest>()
                 .await
+                .inspect_err(|error| tracing::error!(message = %error))
                 .map_err(|_| ApiError::Unspecific)
                 .map(|api_response| api_response.into()),
             StatusCode::NOT_FOUND => {
                 let error_response = response
                     .json::<BasicError>()
                     .await
+                    .inspect_err(|error| tracing::error!(message = %error))
                     .map_err(|_| ApiError::Unspecific)?;
                 Err(ApiError::RepositoryNotFound(
                     error_response
@@ -69,14 +74,12 @@ impl<C: Deref<Target = Client>> GithubCommitsRestApi<'_, C> {
                 let error_response = response
                     .json::<BasicError>()
                     .await
+                    .inspect_err(
+                        |error| tracing::error!(status = status.as_u16(), message = %error),
+                    )
                     .map_err(|_| ApiError::Unspecific)?;
-                println!(
-                    "HTTP status: {status}, Error: {}",
-                    error_response
-                        .message
-                        .as_deref()
-                        .unwrap_or("Unknown reason")
-                );
+
+                tracing::error!(status = status.as_u16(), message = error_response.message);
                 Err(ApiError::Unspecific)
             }
         }

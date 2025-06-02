@@ -8,7 +8,7 @@ repository = "https://github.com/tfkhim/koritsu"
 description = "A GitHub application to automate parts of the Koritsu workflow"
 
 [dependencies]
-axum = "0.8.3"
+axum = { version = "0.8.3", features = ["tracing"] }
 hmac = "0.12.1"
 hyper = { version = "1.6.0", features = ["full"] }
 reqwest = { version = "0.12.15", features = ["json"] }
@@ -18,7 +18,9 @@ sha2 = "0.10.9"
 thiserror = "2.0.12"
 tokio = { version = "1.44.2", features = ["full"] }
 tower = "0.5.2"
-tower-http = "0.6.2"
+tower-http = { version = "0.6.2", features = ["trace"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 [dev-dependencies]
 http-body-util = "0.1.3"

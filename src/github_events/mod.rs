@@ -70,8 +70,37 @@ pub enum GithubEventError {
     ApiRequestFailed(#[from] ApiError),
 }
 
+impl GithubEventError {
+    pub fn publish_tracing_event(&self) {
+        let message = "GitHub event processing failed";
+
+        match self {
+            GithubEventError::InvalidHeader(_) => {
+                tracing::warn!(error = %self, "{message}")
+            }
+            GithubEventError::InvalidSignatureHeader(error) => {
+                tracing::warn!(%error, "{message}")
+            }
+            GithubEventError::SignatureInvalid() => {
+                tracing::warn!(error = %self, "{message}")
+            }
+            GithubEventError::InvalidEventPayload(cause) => {
+                tracing::warn!(error = %self, %cause, "{message}")
+            }
+            GithubEventError::ApiRequestFailed(cause @ ApiError::Unspecific) => {
+                tracing::error!(error = %self, %cause, "{message}")
+            }
+            GithubEventError::ApiRequestFailed(cause) => {
+                tracing::warn!(error = %self, %cause, "{message}")
+            }
+        };
+    }
+}
+
 impl IntoResponse for GithubEventError {
     fn into_response(self) -> Response {
+        self.publish_tracing_event();
+
         let status = match self {
             GithubEventError::SignatureInvalid() => StatusCode::UNAUTHORIZED,
             GithubEventError::ApiRequestFailed(ApiError::Unspecific) => {

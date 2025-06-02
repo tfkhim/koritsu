@@ -12,9 +12,14 @@ use thiserror::Error;
 
 use koritsu_app::{ApplicationConfig, build_app};
 use tokio::net::TcpListener;
+use tracing_subscriber::{
+    EnvFilter, fmt::format::FmtSpan, layer::SubscriberExt, util::SubscriberInitExt,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), StartupError> {
+    init_tracing();
+
     let config = ApplicationConfig::from_env()?;
     let app = build_app(config);
 
@@ -24,11 +29,35 @@ async fn main() -> Result<(), StartupError> {
         .await
         .map_err(|error| StartupError::UnableToBindToSocket(address, error))?;
 
+    tracing::info!("listening on {}", address);
+
     axum::serve(listener, app)
         .await
         .map_err(|error| StartupError::CouldNotServeApplication(address, error))?;
 
     Ok(())
+}
+
+fn init_tracing() {
+    let default_filter = |_| {
+        format!(
+            "{}=debug,tower_http=debug,axum::rejection=trace",
+            env!("CARGO_CRATE_NAME")
+        )
+        .into()
+    };
+
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(default_filter);
+
+    let subscriber = tracing_subscriber::fmt::layer()
+        .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
+        .with_file(true)
+        .with_line_number(true);
+
+    tracing_subscriber::registry()
+        .with(filter)
+        .with(subscriber)
+        .init()
 }
 
 #[derive(Error, Debug)]
