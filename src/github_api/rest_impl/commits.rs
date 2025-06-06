@@ -17,6 +17,7 @@ use std::ops::Deref;
 use tracing::instrument;
 
 use super::BasicError;
+use super::error_handling::IntoErrorHandlingRequest;
 
 pub struct GithubCommitsRestApi<'a, C> {
     base_url: &'a str,
@@ -46,41 +47,26 @@ impl<C: Deref<Target = Client>> GithubCommitsRestApi<'_, C> {
             .header("User-Agent", "koritsu-app")
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
+            .with_error_handling()
             .send()
-            .await
-            .inspect_err(|error| tracing::error!(message = %error))
-            .map_err(|_| ApiError::Unspecific)?;
+            .await?;
 
-        match response.status() {
-            StatusCode::OK => response
+        if response.is_success() {
+            response
                 .json::<BranchComparisonRest>()
                 .await
-                .inspect_err(|error| tracing::error!(message = %error))
-                .map_err(|_| ApiError::Unspecific)
-                .map(|api_response| api_response.into()),
-            StatusCode::NOT_FOUND => {
-                let error_response = response
-                    .json::<BasicError>()
-                    .await
-                    .inspect_err(|error| tracing::error!(message = %error))
-                    .map_err(|_| ApiError::Unspecific)?;
-                Err(ApiError::RepositoryNotFound(
-                    error_response
+                .map(Into::into)
+        } else {
+            let status = response.status();
+            let basic_error: BasicError = response.json().await?;
+
+            match status {
+                StatusCode::NOT_FOUND => Err(ApiError::RepositoryNotFound(
+                    basic_error
                         .message
                         .unwrap_or_else(|| format!("Repository {} not found", compare_url)),
-                ))
-            }
-            status => {
-                let error_response = response
-                    .json::<BasicError>()
-                    .await
-                    .inspect_err(
-                        |error| tracing::error!(status = status.as_u16(), message = %error),
-                    )
-                    .map_err(|_| ApiError::Unspecific)?;
-
-                tracing::error!(status = status.as_u16(), message = error_response.message);
-                Err(ApiError::Unspecific)
+                )),
+                _ => Err(ApiError::Unspecific),
             }
         }
     }

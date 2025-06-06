@@ -18,6 +18,7 @@ use reqwest::Client;
 use serde::Deserialize;
 
 mod commits;
+mod error_handling;
 
 pub struct GitHubRestApi {
     client: Client,

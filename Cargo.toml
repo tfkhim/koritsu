@@ -11,7 +11,7 @@ description = "A GitHub application to automate parts of the Koritsu workflow"
 axum = { version = "0.8.3", features = ["tracing"] }
 hmac = "0.12.1"
 hyper = { version = "1.6.0", features = ["full"] }
-reqwest = { version = "0.12.15", features = ["json"] }
+reqwest = "0.12.15"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 sha2 = "0.10.9"
