@@ -7,7 +7,14 @@
  * received a copy of the license along with this program.
  */
 
-use crate::github_api::{ApiError, BranchComparison, BranchComparisonRequest, GitHubApi};
+use std::sync::Arc;
+
+use crate::{
+    application_context::ApplicationContext,
+    github_api::{
+        ApiError, BranchComparison, BranchComparisonRequest, GitHubApi, GitHubApiProvider,
+    },
+};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -35,13 +42,13 @@ pub struct Installation {
     id: usize,
 }
 
-pub struct WorkflowRunHandler<API> {
-    github_api: API,
+pub struct WorkflowRunHandler<ApiProvider> {
+    app_context: Arc<ApplicationContext<ApiProvider>>,
 }
 
-impl<API: GitHubApi> WorkflowRunHandler<API> {
-    pub fn new(github_api: API) -> Self {
-        Self { github_api }
+impl<ApiProvider: GitHubApiProvider> WorkflowRunHandler<ApiProvider> {
+    pub fn new(app_context: Arc<ApplicationContext<ApiProvider>>) -> Self {
+        Self { app_context }
     }
 
     pub async fn handle_event(&self, event: WorkflowRunEvent) -> Result<(), ApiError> {
@@ -59,6 +66,8 @@ impl<API: GitHubApi> WorkflowRunHandler<API> {
                     "Processing successful workflow run event",
                 );
 
+                let github_api = self.app_context.github_api();
+
                 let branch_comparison_request = BranchComparisonRequest {
                     repository_name,
                     base_branch: default_branch,
@@ -68,8 +77,7 @@ impl<API: GitHubApi> WorkflowRunHandler<API> {
                 let BranchComparison {
                     ahead_by,
                     behind_by,
-                } = self
-                    .github_api
+                } = github_api
                     .compare_commits(branch_comparison_request)
                     .await?;
 

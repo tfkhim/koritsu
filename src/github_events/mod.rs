@@ -45,7 +45,7 @@ pub async fn event_handler<ApiProvider: GitHubApiProvider>(
     }
 
     if headers.get_str("X-Github-Event")? == "workflow_run" {
-        let handler = WorkflowRunHandler::new(app_context.github_api());
+        let handler = WorkflowRunHandler::new(app_context);
         handler.handle_event(from_slice(&body)?).await?;
     }
 
