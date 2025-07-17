@@ -7,25 +7,31 @@
  * received a copy of the license along with this program.
  */
 
-use crate::{ApplicationConfig, github_api::GitHubApi};
+use crate::{
+    ApplicationConfig,
+    github_api::{GitHubApi, GitHubApiProvider},
+};
 
-pub struct ApplicationContext<API> {
+pub struct ApplicationContext<ApiProvider> {
     config: ApplicationConfig,
-    github_api: API,
+    github_api_provider: ApiProvider,
 }
 
-impl<API> ApplicationContext<API> {
+impl<ApiProvider> ApplicationContext<ApiProvider> {
     pub fn config(&self) -> &ApplicationConfig {
         &self.config
     }
 }
 
-impl<API: GitHubApi> ApplicationContext<API> {
-    pub fn new(config: ApplicationConfig, github_api: API) -> Self {
-        Self { config, github_api }
+impl<ApiProvider: GitHubApiProvider> ApplicationContext<ApiProvider> {
+    pub fn new(config: ApplicationConfig, github_api_provider: ApiProvider) -> Self {
+        Self {
+            config,
+            github_api_provider,
+        }
     }
 
-    pub fn github_api(&self) -> &API {
-        &self.github_api
+    pub fn github_api(&self) -> impl GitHubApi {
+        self.github_api_provider.get_api()
     }
 }

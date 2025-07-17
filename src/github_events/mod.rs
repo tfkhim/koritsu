@@ -22,7 +22,7 @@ use workflow_run::WorkflowRunHandler;
 
 use crate::{
     application_context::ApplicationContext,
-    github_api::{ApiError, GitHubApi},
+    github_api::{ApiError, GitHubApiProvider},
     header_map_ext::{GetStrHeaderError, HeaderMapExt},
     problem::Problem,
 };
@@ -30,8 +30,8 @@ use crate::{
 mod verifier;
 mod workflow_run;
 
-pub async fn event_handler<API: GitHubApi>(
-    State(app_context): State<Arc<ApplicationContext<API>>>,
+pub async fn event_handler<ApiProvider: GitHubApiProvider>(
+    State(app_context): State<Arc<ApplicationContext<ApiProvider>>>,
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<(), GithubEventError> {

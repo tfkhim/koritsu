@@ -9,7 +9,6 @@
 
 use crate::github_api::{ApiError, BranchComparison, BranchComparisonRequest, GitHubApi};
 use serde::Deserialize;
-use std::ops::Deref;
 
 #[derive(Debug, Deserialize)]
 pub struct WorkflowRunEvent {
@@ -40,7 +39,7 @@ pub struct WorkflowRunHandler<API> {
     github_api: API,
 }
 
-impl<API: Deref<Target = T>, T: GitHubApi> WorkflowRunHandler<API> {
+impl<API: GitHubApi> WorkflowRunHandler<API> {
     pub fn new(github_api: API) -> Self {
         Self { github_api }
     }

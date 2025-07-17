@@ -7,10 +7,14 @@
  * received a copy of the license along with this program.
  */
 
-pub use rest_impl::GitHubRestApi;
+pub use rest_impl::GitHubRestApiProvider;
 use thiserror::Error;
 
 mod rest_impl;
+
+pub trait GitHubApiProvider: Send + Sync {
+    fn get_api(&self) -> impl GitHubApi;
+}
 
 pub trait GitHubApi: Send + Sync {
     fn compare_commits(

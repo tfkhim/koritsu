@@ -20,7 +20,9 @@ use hmac::{Hmac, Mac};
 use http_body_util::BodyExt;
 use koritsu_app::{
     ApplicationConfig, build_app_with_api,
-    github_api::{ApiError, BranchComparison, BranchComparisonRequest, GitHubApi},
+    github_api::{
+        ApiError, BranchComparison, BranchComparisonRequest, GitHubApi, GitHubApiProvider,
+    },
 };
 use serde_json::{Value, json};
 use sha2::Sha256;
@@ -249,7 +251,13 @@ impl ResponseExt for Response<Bytes> {
 
 struct TestGitHubApi;
 
-impl GitHubApi for TestGitHubApi {
+impl GitHubApiProvider for TestGitHubApi {
+    fn get_api(&self) -> impl GitHubApi {
+        self
+    }
+}
+
+impl GitHubApi for &TestGitHubApi {
     async fn compare_commits(
         &self,
         request: BranchComparisonRequest,

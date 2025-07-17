@@ -13,6 +13,7 @@ use super::ApiError;
 use super::BranchComparison;
 use super::BranchComparisonRequest;
 use super::GitHubApi;
+use super::GitHubApiProvider;
 use commits::GithubCommitsRestApi;
 use reqwest::Client;
 use serde::Deserialize;
@@ -20,12 +21,12 @@ use serde::Deserialize;
 mod commits;
 mod error_handling;
 
-pub struct GitHubRestApi {
+pub struct GitHubRestApiProvider {
     client: Client,
     base_url: String,
 }
 
-impl GitHubRestApi {
+impl GitHubRestApiProvider {
     pub fn new(config: &ApplicationConfig) -> Self {
         let client = Client::new();
         let base_url = config.github_base_url.clone();
@@ -33,12 +34,26 @@ impl GitHubRestApi {
     }
 }
 
-impl GitHubApi for GitHubRestApi {
+impl GitHubApiProvider for GitHubRestApiProvider {
+    fn get_api(&self) -> impl GitHubApi {
+        GitHubRestApi {
+            client: &self.client,
+            base_url: &self.base_url,
+        }
+    }
+}
+
+struct GitHubRestApi<'a> {
+    client: &'a Client,
+    base_url: &'a str,
+}
+
+impl GitHubApi for GitHubRestApi<'_> {
     async fn compare_commits(
         &self,
         request: BranchComparisonRequest,
     ) -> Result<BranchComparison, ApiError> {
-        let comparison = GithubCommitsRestApi::new(&self.base_url, &self.client)
+        let comparison = GithubCommitsRestApi::new(self.base_url, self.client)
             .compare_commits(request)
             .await?;
 
