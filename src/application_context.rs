@@ -9,7 +9,7 @@
 
 use crate::{
     ApplicationConfig,
-    github_api::{GitHubApi, GitHubApiProvider},
+    github_api::{ApiError, AuthenticationMethod, GitHubApi, GitHubApiProvider},
 };
 
 pub struct ApplicationContext<ApiProvider> {
@@ -31,7 +31,10 @@ impl<ApiProvider: GitHubApiProvider> ApplicationContext<ApiProvider> {
         }
     }
 
-    pub fn github_api(&self) -> impl GitHubApi {
-        self.github_api_provider.get_api()
+    pub async fn github_api(
+        &self,
+        auth_method: AuthenticationMethod,
+    ) -> Result<impl GitHubApi, ApiError> {
+        self.github_api_provider.get_api(auth_method).await
     }
 }

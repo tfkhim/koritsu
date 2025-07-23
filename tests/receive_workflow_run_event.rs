@@ -21,7 +21,8 @@ use http_body_util::BodyExt;
 use koritsu_app::{
     ApplicationConfig, build_app_with_api,
     github_api::{
-        ApiError, BranchComparison, BranchComparisonRequest, GitHubApi, GitHubApiProvider,
+        ApiError, AuthenticationMethod, BranchComparison, BranchComparisonRequest, GitHubApi,
+        GitHubApiProvider,
     },
 };
 use serde_json::{Value, json};
@@ -175,7 +176,12 @@ struct TestClient {
 
 impl TestClient {
     fn new() -> Self {
-        let config = ApplicationConfig::with_secret("secret".to_string());
+        let config = ApplicationConfig {
+            github_base_url: String::default(),
+            github_webhook_secret: "secret".to_owned(),
+            client_id: String::default(),
+            private_key_file: String::default(),
+        };
 
         let api = TestGitHubApi {};
         let service = build_app_with_api(config.clone(), api).into_service();
@@ -252,8 +258,8 @@ impl ResponseExt for Response<Bytes> {
 struct TestGitHubApi;
 
 impl GitHubApiProvider for TestGitHubApi {
-    fn get_api(&self) -> impl GitHubApi {
-        self
+    async fn get_api(&self, _: AuthenticationMethod) -> Result<impl GitHubApi, ApiError> {
+        Ok(self)
     }
 }
 

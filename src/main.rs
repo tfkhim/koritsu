@@ -21,7 +21,7 @@ async fn main() -> Result<(), StartupError> {
     init_tracing();
 
     let config = ApplicationConfig::from_env()?;
-    let app = build_app(config);
+    let app = build_app(config).map_err(StartupError::ApplicationInitialization)?;
 
     let address = "127.0.0.1:8080".parse::<SocketAddr>()?;
 
@@ -63,7 +63,10 @@ fn init_tracing() {
 #[derive(Error, Debug)]
 enum StartupError {
     #[error("Could not load application configuration")]
-    ConfigurationError(#[from] std::env::VarError),
+    Configuration(#[from] std::env::VarError),
+
+    #[error(transparent)]
+    ApplicationInitialization(Box<dyn std::error::Error>),
 
     #[error("Invalid socket address")]
     InvalidSocketAddress(#[from] std::net::AddrParseError),

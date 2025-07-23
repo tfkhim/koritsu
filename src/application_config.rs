@@ -13,17 +13,17 @@ use std::env::{self, VarError};
 pub struct ApplicationConfig {
     pub github_base_url: String,
     pub github_webhook_secret: String,
+    pub client_id: String,
+    pub private_key_file: String,
 }
 
 impl ApplicationConfig {
-    pub fn with_secret(secret: String) -> Self {
-        ApplicationConfig {
-            github_base_url: "https://api.github.com".to_string(),
-            github_webhook_secret: secret,
-        }
-    }
-
     pub fn from_env() -> Result<ApplicationConfig, VarError> {
-        Ok(Self::with_secret(env::var("GITHUB_WEBHOOK_SECRET")?))
+        Ok(ApplicationConfig {
+            github_base_url: "https://api.github.com".to_owned(),
+            github_webhook_secret: env::var("GITHUB_WEBHOOK_SECRET")?,
+            client_id: env::var("GITHUB_CLIENT_ID")?,
+            private_key_file: env::var("PRIVATE_KEY_FILE")?,
+        })
     }
 }

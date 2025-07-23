@@ -12,7 +12,8 @@ use std::sync::Arc;
 use crate::{
     application_context::ApplicationContext,
     github_api::{
-        ApiError, BranchComparison, BranchComparisonRequest, GitHubApi, GitHubApiProvider,
+        ApiError, AuthenticationMethod, BranchComparison, BranchComparisonRequest, GitHubApi,
+        GitHubApiProvider,
     },
 };
 use serde::Deserialize;
@@ -66,7 +67,8 @@ impl<ApiProvider: GitHubApiProvider> WorkflowRunHandler<ApiProvider> {
                     "Processing successful workflow run event",
                 );
 
-                let github_api = self.app_context.github_api();
+                let auth_method = AuthenticationMethod::AppInstallation { installation_id };
+                let github_api = self.app_context.github_api(auth_method).await?;
 
                 let branch_comparison_request = BranchComparisonRequest {
                     repository_name,

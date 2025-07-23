@@ -13,7 +13,14 @@ use thiserror::Error;
 mod rest_impl;
 
 pub trait GitHubApiProvider: Send + Sync {
-    fn get_api(&self) -> impl GitHubApi;
+    fn get_api(
+        &self,
+        auth_method: AuthenticationMethod,
+    ) -> impl Future<Output = Result<impl GitHubApi, ApiError>> + Send;
+}
+
+pub enum AuthenticationMethod {
+    AppInstallation { installation_id: usize },
 }
 
 pub trait GitHubApi: Send + Sync {
@@ -36,6 +43,9 @@ pub struct BranchComparison {
 
 #[derive(Error, Debug)]
 pub enum ApiError {
+    #[error("{0}")]
+    Authentication(String),
+
     #[error("{0}")]
     RepositoryNotFound(String),
 

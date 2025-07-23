@@ -7,7 +7,7 @@
  * received a copy of the license along with this program.
  */
 
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 
 pub use application_config::ApplicationConfig;
 use application_context::ApplicationContext;
@@ -24,9 +24,9 @@ mod github_events;
 mod header_map_ext;
 mod problem;
 
-pub fn build_app(config: ApplicationConfig) -> Router {
-    let github_api = GitHubRestApiProvider::new(&config);
-    build_app_with_api(config, github_api)
+pub fn build_app(config: ApplicationConfig) -> Result<Router, Box<dyn Error>> {
+    let github_api = GitHubRestApiProvider::new(&config)?;
+    Ok(build_app_with_api(config, github_api))
 }
 
 pub fn build_app_with_api<ApiProvider: GitHubApiProvider + 'static>(
