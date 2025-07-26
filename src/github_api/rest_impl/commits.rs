@@ -47,15 +47,13 @@ impl<C: Deref<Target = Client>> GithubCommitsRestApi<'_, C> {
             self.base_url, request.repository_name, request.base_branch, request.head_branch
         );
 
-        let bearer_token = format!("Bearer {}", self.token);
-
         let response = self
             .client
             .get(&compare_url)
             .header("User-Agent", "koritsu-app")
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
-            .header("Authorization", bearer_token)
+            .bearer_auth(self.token)
             .with_error_handling()
             .send()
             .await?;

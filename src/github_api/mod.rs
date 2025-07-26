@@ -28,6 +28,11 @@ pub trait GitHubApi: Send + Sync {
         &self,
         request: BranchComparisonRequest,
     ) -> impl Future<Output = Result<BranchComparison, ApiError>> + Send;
+
+    fn update_reference(
+        &self,
+        request: UpdateReferenceRequest,
+    ) -> impl Future<Output = Result<(), ApiError>> + Send;
 }
 
 pub struct BranchComparisonRequest {
@@ -41,13 +46,26 @@ pub struct BranchComparison {
     pub behind_by: usize,
 }
 
+pub struct UpdateReferenceRequest {
+    pub repository_name: String,
+    pub reference: String,
+    pub sha1: String,
+    pub force: bool,
+}
+
 #[derive(Error, Debug)]
 pub enum ApiError {
     #[error("{0}")]
     Authentication(String),
 
     #[error("{0}")]
+    Authorization(String),
+
+    #[error("{0}")]
     RepositoryNotFound(String),
+
+    #[error(transparent)]
+    Serialization(#[from] serde_json::Error),
 
     #[error("Unspecific error")]
     Unspecific,

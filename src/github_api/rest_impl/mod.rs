@@ -22,7 +22,9 @@ use commits::GithubCommitsRestApi;
 use error_handling::IntoErrorHandlingRequest;
 use jwt_token_creator::JwtTokenCreator;
 use reqwest::Client;
+use reqwest::StatusCode;
 use serde::Deserialize;
+use serde::Serialize;
 use tracing::instrument;
 
 mod commits;
@@ -64,7 +66,6 @@ impl GitHubApiProvider for GitHubRestApiProvider {
             "{}/app/installations/{installation_id}/access_tokens",
             self.base_url
         );
-        let bearer_token = format!("Bearer {jwt_token}");
 
         let response = self
             .client
@@ -72,7 +73,7 @@ impl GitHubApiProvider for GitHubRestApiProvider {
             .header("User-Agent", "koritsu-app")
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
-            .header("Authorization", bearer_token)
+            .bearer_auth(&jwt_token)
             .with_error_handling()
             .send()
             .await?;
@@ -121,9 +122,64 @@ impl GitHubApi for GitHubRestApi<'_> {
 
         Ok(comparison)
     }
+
+    #[instrument(skip_all, fields(request))]
+    async fn update_reference(
+        &self,
+        request: super::UpdateReferenceRequest,
+    ) -> Result<(), ApiError> {
+        let ref_update_url = format!(
+            "{}/repos/{}/git/refs/{}",
+            self.base_url, request.repository_name, request.reference,
+        );
+
+        let request_body = serde_json::to_vec(&UpdateReferenceRequest {
+            sha: request.sha1,
+            force: request.force,
+        })?;
+
+        let response = self
+            .client
+            .patch(&ref_update_url)
+            .body(request_body)
+            .header("User-Agent", "koritsu-app")
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .bearer_auth(&self.token)
+            .with_error_handling()
+            .send()
+            .await?;
+
+        if response.is_success() {
+            Ok(())
+        } else {
+            let status = response.status();
+            let basic_error: BasicError = response.json().await?;
+
+            match status {
+                StatusCode::NOT_FOUND => Err(ApiError::RepositoryNotFound(
+                    basic_error
+                        .message
+                        .unwrap_or_else(|| format!("Repository {} not found", ref_update_url)),
+                )),
+                StatusCode::FORBIDDEN => Err(ApiError::Authorization(
+                    basic_error
+                        .message
+                        .unwrap_or_else(|| "Operation was forbidden".to_string()),
+                )),
+                _ => Err(ApiError::Unspecific),
+            }
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
 struct BasicError {
     pub message: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct UpdateReferenceRequest {
+    pub sha: String,
+    pub force: bool,
 }

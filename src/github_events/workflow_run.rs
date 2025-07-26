@@ -13,7 +13,7 @@ use crate::{
     application_context::ApplicationContext,
     github_api::{
         ApiError, AuthenticationMethod, BranchComparison, BranchComparisonRequest, GitHubApi,
-        GitHubApiProvider,
+        GitHubApiProvider, UpdateReferenceRequest,
     },
 };
 use serde::Deserialize;
@@ -30,6 +30,7 @@ pub struct WorkflowRunEvent {
 pub struct WorkflowRun {
     conclusion: Option<String>,
     head_branch: Option<String>,
+    head_sha: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -57,6 +58,7 @@ impl<ApiProvider: GitHubApiProvider> WorkflowRunHandler<ApiProvider> {
             let repository_name = event.repository.full_name;
             let installation_id = event.installation.id;
             let default_branch = event.repository.default_branch;
+            let head_sha = event.workflow_run.head_sha;
 
             if let Some(head_branch) = event.workflow_run.head_branch {
                 tracing::info!(
@@ -64,6 +66,7 @@ impl<ApiProvider: GitHubApiProvider> WorkflowRunHandler<ApiProvider> {
                     installation_id,
                     default_branch,
                     head_branch,
+                    head_sha,
                     "Processing successful workflow run event",
                 );
 
@@ -71,8 +74,8 @@ impl<ApiProvider: GitHubApiProvider> WorkflowRunHandler<ApiProvider> {
                 let github_api = self.app_context.github_api(auth_method).await?;
 
                 let branch_comparison_request = BranchComparisonRequest {
-                    repository_name,
-                    base_branch: default_branch,
+                    repository_name: repository_name.clone(),
+                    base_branch: default_branch.clone(),
                     head_branch,
                 };
 
@@ -84,6 +87,17 @@ impl<ApiProvider: GitHubApiProvider> WorkflowRunHandler<ApiProvider> {
                     .await?;
 
                 tracing::info!(ahead_by, behind_by, "Branch comparison was successful");
+
+                if ahead_by == 1 && behind_by == 0 {
+                    tracing::info!("Performing fast forward merge");
+                    let reference_update = UpdateReferenceRequest {
+                        repository_name,
+                        reference: format!("heads/{default_branch}"),
+                        sha1: head_sha,
+                        force: false,
+                    };
+                    github_api.update_reference(reference_update).await?;
+                }
             }
         }
 

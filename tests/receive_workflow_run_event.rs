@@ -22,7 +22,7 @@ use koritsu_app::{
     ApplicationConfig, build_app_with_api,
     github_api::{
         ApiError, AuthenticationMethod, BranchComparison, BranchComparisonRequest, GitHubApi,
-        GitHubApiProvider,
+        GitHubApiProvider, UpdateReferenceRequest,
     },
 };
 use serde_json::{Value, json};
@@ -289,6 +289,10 @@ impl GitHubApi for &TestGitHubApi {
             ahead_by,
             behind_by,
         })
+    }
+
+    async fn update_reference(&self, _: UpdateReferenceRequest) -> Result<(), ApiError> {
+        Ok(())
     }
 }
 
